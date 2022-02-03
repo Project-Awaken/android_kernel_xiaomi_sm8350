@@ -186,6 +186,9 @@
 				qcom,mdss-dsi-off-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-timing-switch-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-nolp-command-state = "dsi_lp_mode";
+
+				qcom,panel-roi-alignment = <1080 12 1080 12 1080 12>;
+				qcom,partial-update-enabled = "single_roi";
 			};
 
 			timing@1 {
@@ -312,6 +315,9 @@
 				qcom,mdss-dsi-off-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-timing-switch-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-nolp-command-state = "dsi_lp_mode";
+
+				qcom,panel-roi-alignment = <1080 12 1080 12 1080 12>;
+				qcom,partial-update-enabled = "single_roi";
 			};
 		};
 	};

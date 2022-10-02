@@ -31,9 +31,9 @@
 #include <linux/syscalls.h>
 #include <linux/power_supply.h>
 #include <linux/pm_qos.h>
+#include <linux/vmalloc.h>
 #include "aw8624_reg.h"
 #include "aw8624.h"
-#include "aw8624_params.h"
 
 /******************************************************
  *
@@ -80,7 +80,7 @@ static char aw8624_rtp_name[][AW8624_RTP_NAME_MAX] = {
 	{"Cowboy_RTP.bin"},
 	{"Echo_RTP.bin"},
 	{"Fairyland_RTP.bin"},
-	{"Fantasy_RTP.bin"},
+	{"Fantasy_RTP.bin"},  //31
 	{"Field_Trip_RTP.bin"},
 	{"Glee_RTP.bin"},
 	{"Glockenspiel_RTP.bin"},
@@ -90,17 +90,17 @@ static char aw8624_rtp_name[][AW8624_RTP_NAME_MAX] = {
 	{"Lollipop_RTP.bin"},
 	{"MiMix2_RTP.bin"},
 	{"Mi_RTP.bin"},
-	{"MiHouse_RTP.bin"},
+	{"MiHouse_RTP.bin"},  //41
 	{"MiJazz_RTP.bin"},
 	{"MiRemix_RTP.bin"},
 	{"Mountain_Spring_RTP.bin"},
 	{"Orange_RTP.bin"},
-	{"Raindrops_RTP.bin"},
+	{"WindChime_RTP.bin"}, //46
 	{"Space_Age_RTP.bin"},
 	{"ToyRobot_RTP.bin"},
 	{"Vigor_RTP.bin"},
 	{"Bottle_RTP.bin"},
-	{"Bubble_RTP.bin"},
+	{"Bubble_RTP.bin"},   //51
 	{"Bullfrog_RTP.bin"},
 	{"Burst_RTP.bin"},
 	{"Chirp_RTP.bin"},
@@ -110,7 +110,7 @@ static char aw8624_rtp_name[][AW8624_RTP_NAME_MAX] = {
 	{"FadeOut_RTP.bin"},
 	{"Flute_RTP.bin"},
 	{"Fresh_RTP.bin"},
-	{"Frog_RTP.bin"},
+	{"Frog_RTP.bin"},   //61
 	{"Guitar_RTP.bin"},
 	{"Harp_RTP.bin"},
 	{"IncomingMessage_RTP.bin"},
@@ -192,6 +192,56 @@ static char aw8624_rtp_name[][AW8624_RTP_NAME_MAX] = {
 	{"aw8624_rtp.bin"},
 	{"aw8624_rtp.bin"},	//141
 	{"aw8624_rtp.bin"},
+	{"aw8624_rtp.bin"},
+	{"aw8624_rtp.bin"},
+	{"aw8624_rtp.bin"},
+	{"aw8624_rtp.bin"},
+	{"aw8624_rtp.bin"},
+	{"aw8624_rtp.bin"},
+	{"aw8624_rtp.bin"},
+	{"aw8624_rtp.bin"},
+	{"aw8624_rtp.bin"},
+	{"aw8624_rtp.bin"},
+	{"aw8624_rtp.bin"},	//153
+	{"Atlantis_RTP.bin"},
+	{"DigitalUniverse_RTP.bin"},
+	{"Reveries_RTP.bin"},
+	{"FOD_Motion_Triang_RTP.bin"},
+	{"FOD_Motion_Flare_RTP.bin"},
+	{"FOD_Motion_Ripple_RTP.bin"},
+	{"FOD_Motion_Spiral_RTP.bin"},
+	{"gamebox_launch_rtp.bin"}, // 161
+	{"Gesture_Back_Pull_RTP.bin"},// 162
+	{"Gesture_Back_Release_RTP.bin"},// 163
+	{"alert_rtp.bin"},// 164
+	{"feedback_negative_light_rtp.bin"},// 165
+	{"feedback_neutral_rtp.bin"},// 166
+	{"feedback_positive_rtp.bin"},// 167
+	{"fingerprint_record_rtp.bin"},// 168
+	{"lockdown_rtp.bin"},// 169
+	{"sliding_damping_rtp.bin"},// 170
+	{"todo_alldone_rtp.bin"},// 171
+	{"uninstall_animation_icon_rtp.bin"},// 172
+	{"signal_button_highlight_rtp.bin"},//173
+	{"signal_button_negative_rtp.bin"},
+	{"signal_button_rtp.bin"},
+	{"signal_clock_high_rtp.bin"},//176
+	{"signal_clock_rtp.bin"},
+	{"signal_clock_unit_rtp.bin"},
+	{"signal_inputbox_rtp.bin"},
+	{"signal_key_high_rtp.bin"},
+	{"signal_key_unit_rtp.bin"},//181
+	{"signal_list_highlight_rtp.bin"},
+	{"signal_list_rtp.bin"},
+	{"signal_picker_rtp.bin"},
+	{"signal_popup_rtp.bin"},
+	{"signal_seekbar_rtp.bin"},//186
+	{"signal_switch_rtp.bin"},
+	{"signal_tab_rtp.bin"},
+	{"signal_text_rtp.bin"},
+	{"signal_transition_light_rtp.bin"},
+	{"signal_transition_rtp.bin"},//191
+	{"haptics_video_rtp.bin"},//192
 };
 
 struct aw8624_container *aw8624_rtp;
@@ -285,7 +335,7 @@ static int aw8624_i2c_writes(struct aw8624 *aw8624,
 	data[0] = reg_addr;
 	memcpy(&data[1], buf, len);
 
-	ret = i2c_master_send(aw8624->i2c, data, len + 1);
+	ret = i2c_master_send(aw8624->i2c, data,(uint16_t)(len + 1));
 	if (ret < 0) {
 		pr_err("%s: i2c master send error\n", __func__);
 	}
@@ -391,10 +441,16 @@ static void aw8624_container_update(struct aw8624 *aw8624,
 			 aw8624_cont->data[0 + shift]);
 	aw8624_i2c_write(aw8624, AW8624_REG_RAMADDRL,
 			 aw8624_cont->data[1 + shift]);
-	shift = aw8624->ram.ram_shift;
-	for (i = shift; i < aw8624_cont->len; i++) {
-		aw8624_i2c_write(aw8624, AW8624_REG_RAMDATA,
-				 aw8624_cont->data[i]);
+	i = aw8624->ram.ram_shift;
+	while(i < aw8624_cont->len) {
+		if((aw8624_cont->len - i) < 2048) {
+			aw8624_i2c_writes(aw8624, AW8624_REG_RAMDATA,
+					  &aw8624_cont->data[i],
+					  aw8624_cont->len - i);
+			break;
+		}
+		aw8624_i2c_writes(aw8624, AW8624_REG_RAMDATA, &aw8624_cont->data[i], 2048);
+		i += 2048;
 	}
 
 	/* RAMINIT Disable */
@@ -453,6 +509,7 @@ static void aw8624_ram_loaded(const struct firmware *cont, void *context)
 	aw8624_fw->len = cont->size;
 	memcpy(aw8624_fw->data, cont->data, cont->size);
 	release_firmware(cont);
+
 	aw8624_container_update(aw8624, aw8624_fw);
 
 	aw8624->ram.len = aw8624_fw->len;
@@ -476,7 +533,6 @@ static int aw8624_ram_update(struct aw8624 *aw8624)
 				       aw8624, aw8624_ram_loaded);
 }
 
-#if 0
 #ifdef AWINIC_RAM_UPDATE_DELAY
 static void aw8624_ram_work_routine(struct work_struct *work)
 {
@@ -489,100 +545,16 @@ static void aw8624_ram_work_routine(struct work_struct *work)
 
 }
 #endif
-#endif
 
 static int aw8624_ram_init(struct aw8624 *aw8624)
 {
 #ifdef AWINIC_RAM_UPDATE_DELAY
-
-    uint16_t i = 0;
-	unsigned int shift = 0;
-	unsigned short check_sum = 0;
-	
-	aw8624->ram_init = 0;
-	aw8624->rtp_init = 0;
-	
-    pr_info("%s enter.\r\n",__func__);
-	if(aw8624_ram_data == NULL){
-		pr_err("%s: failed to read %s\n", __func__, aw8624_ram_name);
-		return -1;
-	}
-	
-    /* check sum */
-	for (i = 2; i < sizeof(aw8624_ram_data); i++) {
-		check_sum += aw8624_ram_data[i];
-	}
-	if (check_sum !=
-	    (unsigned short)((aw8624_ram_data[0] << 8) | (aw8624_ram_data[1]))) {
-		pr_err("%s: check sum err: check_sum=0x%04x\n", __func__,
-		       check_sum);
-		return -1;
-	} else {
-		pr_info("%s: check sum pass : 0x%04x\n", __func__, check_sum);
-		aw8624->ram.check_sum = check_sum;
-	}
-	
-	mutex_lock(&aw8624->lock);
-
-	aw8624->ram.baseaddr_shift = 2;
-	aw8624->ram.ram_shift = 4;
-
-	/* RAMINIT Enable */
-	aw8624_i2c_write_bits(aw8624, AW8624_REG_SYSCTRL,
-			      AW8624_BIT_SYSCTRL_RAMINIT_MASK,
-			      AW8624_BIT_SYSCTRL_RAMINIT_EN);
-
-	/* base addr */
-	shift = aw8624->ram.baseaddr_shift;
-	aw8624->ram.base_addr =
-	    (unsigned int)((aw8624_ram_data[0 + shift] << 8) |
-			   aw8624_ram_data[1 + shift]);
-	pr_info("%s: base_addr=0x%4x\n", __func__, aw8624->ram.base_addr);
-
-	aw8624_i2c_write(aw8624, AW8624_REG_BASE_ADDRH,
-			 aw8624_ram_data[0 + shift]);
-	aw8624_i2c_write(aw8624, AW8624_REG_BASE_ADDRL,
-			 aw8624_ram_data[1 + shift]);
-
-	aw8624_i2c_write(aw8624, AW8624_REG_FIFO_AEH,
-			 (unsigned char)((aw8624->ram.base_addr >> 1) >> 8));
-	aw8624_i2c_write(aw8624, AW8624_REG_FIFO_AEL,
-			 (unsigned char)((aw8624->ram.base_addr >> 1) &
-					 0x00FF));
-	aw8624_i2c_write(aw8624, AW8624_REG_FIFO_AFH,
-			 (unsigned
-			  char)((aw8624->ram.base_addr -
-				 (aw8624->ram.base_addr >> 2)) >> 8));
-	aw8624_i2c_write(aw8624, AW8624_REG_FIFO_AFL,
-			 (unsigned
-			  char)((aw8624->ram.base_addr -
-				 (aw8624->ram.base_addr >> 2)) & 0x00FF));
-
-	/* ram */
-	shift = aw8624->ram.baseaddr_shift;
-	aw8624_i2c_write(aw8624, AW8624_REG_RAMADDRH,
-			 aw8624_ram_data[0 + shift]);
-	aw8624_i2c_write(aw8624, AW8624_REG_RAMADDRL,
-			 aw8624_ram_data[1 + shift]);
-	shift = aw8624->ram.ram_shift;
-	for (i = shift; i < sizeof(aw8624_ram_data); i++) {
-		aw8624_i2c_write(aw8624, AW8624_REG_RAMDATA,
-				 aw8624_ram_data[i]);
-	}
-
-	/* RAMINIT Disable */
-	aw8624_i2c_write_bits(aw8624, AW8624_REG_SYSCTRL,
-			      AW8624_BIT_SYSCTRL_RAMINIT_MASK,
-			      AW8624_BIT_SYSCTRL_RAMINIT_OFF);
-
-	mutex_unlock(&aw8624->lock);
-
-	pr_info("%s: exit\n", __func__);
-	aw8624->ram.len = sizeof(aw8624_ram_data) - 4;
-	aw8624->ram_init = 1;
-	aw8624->rtp_init = 1;
-	pr_info("%s: fw update complete\n", __func__);
-
+	int ram_timer_val = 10000;
+	INIT_DELAYED_WORK(&aw8624->ram_work, aw8624_ram_work_routine);
+	//schedule_delayed_work(&aw8624->ram_work,
+	//msecs_to_jiffies(ram_timer_val));
+	queue_delayed_work(aw8624->work_queue, &aw8624->ram_work,
+			   msecs_to_jiffies(ram_timer_val));
 #else
 	aw8624_ram_update(aw8624);
 #endif

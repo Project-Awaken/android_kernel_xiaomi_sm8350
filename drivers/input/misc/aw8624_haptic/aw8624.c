@@ -4,7 +4,6 @@
  * Version: v1.0.0
  *
  * Copyright (c) 2019 AWINIC Technology CO., LTD
- * Copyright (C) 2021 XiaoMi, Inc.
  *
  *  Author: Joseph <zhangzetao@awinic.com.cn>
  *
@@ -80,7 +79,7 @@ static char aw8624_rtp_name[][AW8624_RTP_NAME_MAX] = {
 	{"Cowboy_RTP.bin"},
 	{"Echo_RTP.bin"},
 	{"Fairyland_RTP.bin"},
-	{"Fantasy_RTP.bin"},  //31
+	{"Fantasy_RTP.bin"},	//31
 	{"Field_Trip_RTP.bin"},
 	{"Glee_RTP.bin"},
 	{"Glockenspiel_RTP.bin"},
@@ -90,17 +89,17 @@ static char aw8624_rtp_name[][AW8624_RTP_NAME_MAX] = {
 	{"Lollipop_RTP.bin"},
 	{"MiMix2_RTP.bin"},
 	{"Mi_RTP.bin"},
-	{"MiHouse_RTP.bin"},  //41
+	{"MiHouse_RTP.bin"},	//41
 	{"MiJazz_RTP.bin"},
 	{"MiRemix_RTP.bin"},
 	{"Mountain_Spring_RTP.bin"},
 	{"Orange_RTP.bin"},
-	{"WindChime_RTP.bin"}, //46
+	{"WindChime_RTP.bin"},	//46
 	{"Space_Age_RTP.bin"},
 	{"ToyRobot_RTP.bin"},
 	{"Vigor_RTP.bin"},
 	{"Bottle_RTP.bin"},
-	{"Bubble_RTP.bin"},   //51
+	{"Bubble_RTP.bin"},	//51
 	{"Bullfrog_RTP.bin"},
 	{"Burst_RTP.bin"},
 	{"Chirp_RTP.bin"},
@@ -110,7 +109,7 @@ static char aw8624_rtp_name[][AW8624_RTP_NAME_MAX] = {
 	{"FadeOut_RTP.bin"},
 	{"Flute_RTP.bin"},
 	{"Fresh_RTP.bin"},
-	{"Frog_RTP.bin"},   //61
+	{"Frog_RTP.bin"},	//61
 	{"Guitar_RTP.bin"},
 	{"Harp_RTP.bin"},
 	{"IncomingMessage_RTP.bin"},
@@ -189,20 +188,20 @@ static char aw8624_rtp_name[][AW8624_RTP_NAME_MAX] = {
 	{"firearms_p18c_RTP.bin"},	//137
 	{"aw8624_rtp.bin"},
 	{"aw8624_rtp.bin"},
-	{"aw8624_rtp.bin"},
-	{"aw8624_rtp.bin"},	//141
-	{"aw8624_rtp.bin"},
-	{"aw8624_rtp.bin"},
-	{"aw8624_rtp.bin"},
-	{"aw8624_rtp.bin"},
-	{"aw8624_rtp.bin"},
-	{"aw8624_rtp.bin"},
-	{"aw8624_rtp.bin"},
-	{"aw8624_rtp.bin"},
-	{"aw8624_rtp.bin"},
-	{"aw8624_rtp.bin"},
-	{"aw8624_rtp.bin"},
-	{"aw8624_rtp.bin"},	//153
+	{"CFM_KillOne_RTP.bin"},
+	{"CFM_Headshot_RTP.bin"},	//141
+	{"CFM_MultiKill_RTP.bin"},
+	{"CFM_KillOne_Strong_RTP.bin"},
+	{"CFM_Headshot_Strong_RTP.bin"},
+	{"CFM_MultiKill_Strong_RTP.bin"},
+	{"CFM_Weapon_Grenade_Explode_RTP.bin"},
+	{"CFM_Weapon_Grenade_KillOne_RTP.bin"},
+	{"CFM_ImpactFlesh_Normal_RTP.bin"},
+	{"CFM_Weapon_C4_Installed_RTP.bin"},
+	{"CFM_Hero_Appear_RTP.bin"},
+	{"CFM_UI_Reward_OpenBox_RTP.bin"},
+	{"CFM_UI_Reward_Task_RTP.bin"},
+	{"CFM_Weapon_BLT_Shoot_RTP.bin"},	//153
 	{"Atlantis_RTP.bin"},
 	{"DigitalUniverse_RTP.bin"},
 	{"Reveries_RTP.bin"},
@@ -254,6 +253,7 @@ struct aw8624 *g_aw8624;
  ******************************************************/
 static void aw8624_interrupt_clear(struct aw8624 *aw8624);
 static int aw8624_haptic_get_vbat(struct aw8624 *aw8624);
+static int aw8624_ram_update(struct aw8624 *aw8624);
 //static int aw8624_haptic_trig_enable_config(struct aw8624 *aw8624);
 
  /******************************************************
@@ -395,6 +395,7 @@ static void aw8624_container_update(struct aw8624 *aw8624,
 				    struct aw8624_container *aw8624_cont)
 {
 	int i = 0;
+	int ret = -1;//Daniel 20211009 modify start
 	unsigned int shift = 0;
 
 	pr_info("%s: enter\n", __func__);
@@ -444,12 +445,26 @@ static void aw8624_container_update(struct aw8624 *aw8624,
 	i = aw8624->ram.ram_shift;
 	while(i < aw8624_cont->len) {
 		if((aw8624_cont->len - i) < 2048) {
-			aw8624_i2c_writes(aw8624, AW8624_REG_RAMDATA,
+			ret = aw8624_i2c_writes(aw8624, AW8624_REG_RAMDATA,
 					  &aw8624_cont->data[i],
 					  aw8624_cont->len - i);
+			if (ret < 0) {
+				pr_err("%s: i2c master send error\n", __func__);
+				msleep(1000);//wait 1s retry
+				aw8624->ram_init = 0;
+				mutex_unlock(&aw8624->lock);
+				return;
+			}
 			break;
 		}
-		aw8624_i2c_writes(aw8624, AW8624_REG_RAMDATA, &aw8624_cont->data[i], 2048);
+		ret = aw8624_i2c_writes(aw8624, AW8624_REG_RAMDATA, &aw8624_cont->data[i], 2048);
+		if (ret < 0) {
+			pr_err("%s: i2c master send error\n", __func__);
+			msleep(1000);//wait 1s retry
+			aw8624->ram_init = 0;
+			mutex_unlock(&aw8624->lock);
+			return;
+		}
 		i += 2048;
 	}
 
@@ -458,6 +473,7 @@ static void aw8624_container_update(struct aw8624 *aw8624,
 			      AW8624_BIT_SYSCTRL_RAMINIT_MASK,
 			      AW8624_BIT_SYSCTRL_RAMINIT_OFF);
 
+	aw8624->ram_init = 1;//Daniel 20211009 modify end
 	mutex_unlock(&aw8624->lock);
 	pr_info("%s: exit\n", __func__);
 }
@@ -515,13 +531,22 @@ static void aw8624_ram_loaded(const struct firmware *cont, void *context)
 	aw8624->ram.len = aw8624_fw->len;
 
 	kfree(aw8624_fw);
-
-	aw8624->ram_init = 1;
-	pr_info("%s: fw update complete\n", __func__);
-
-	//aw8624_haptic_trig_enable_config(aw8624);
-
+	
+	//Daniel 20211009 modify start
 	aw8624_rtp_update(aw8624);
+	if(aw8624->ram_init == 1){
+		pr_info("%s: fw update complete\n", __func__);
+	} else {
+		pr_info("%s: ram_retry_cnt = %d \n", __func__, aw8624->ram_retry_cnt);
+		if(aw8624->ram_retry_cnt < 5){
+			aw8624->ram_retry_cnt++;
+			aw8624_ram_update(aw8624);
+		} else {
+			pr_info("%s: fw update fail! ram_retry_cnt = %d \n", __func__, aw8624->ram_retry_cnt);
+			aw8624->ram_retry_cnt = 0;
+		}
+	}//Daniel 20211009 modify end
+	//aw8624_haptic_trig_enable_config(aw8624);
 }
 
 static int aw8624_ram_update(struct aw8624 *aw8624)
@@ -2966,6 +2991,10 @@ static int aw8624_haptics_upload_effect(struct input_dev *dev,
 		}
 
 		aw8624->effect_id = data[0];
+		//this mapping for aw8624 effect_id 21
+		if (aw8624->effect_id == 521) {
+			aw8624->effect_id = 21;
+		}
 		pr_debug("%s: aw8624->effect_id =%d \n", __func__,
 			 aw8624->effect_id);
 		play->vmax_mv = effect->u.periodic.magnitude;	/*vmax level */
@@ -4471,6 +4500,7 @@ aw8624_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	}
 	INIT_WORK(&aw8624->set_gain_work, aw8624_haptics_set_gain_work_routine);
 	aw8624->ram_init = 0;//Daniel 20210527 modify
+	aw8624->ram_retry_cnt = 0;//Daniel 20211009 modify
 	aw8624_vibrator_init(aw8624);
 	aw8624_haptic_init(aw8624);
 	aw8624_ram_init(aw8624);

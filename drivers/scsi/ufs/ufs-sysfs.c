@@ -642,7 +642,6 @@ static ssize_t _name##_show(struct device *dev,				\
 	struct device_attribute *attr, char *buf)			\
 {									\
 	bool flag;							\
-	int ret;							\
 	u8 index = 0;							\
 	struct ufs_hba *hba = dev_get_drvdata(dev);			\
 	pm_runtime_get_sync(hba->dev);					\
@@ -847,7 +846,7 @@ static ssize_t dyn_cap_needed_attribute_show(struct device *dev,
 
 	pm_runtime_get_sync(hba->dev);
 	ret = ufshcd_query_attr(hba, UPIU_QUERY_OPCODE_READ_ATTR,
-		QUERY_ATTR_IDN_DYN_CAP_NEEDED, lun, 0, &value);
+			QUERY_ATTR_IDN_DYN_CAP_NEEDED, lun, 0, &value);
 	pm_runtime_put_sync(hba->dev);
 	if (ret)
 		return -EINVAL;

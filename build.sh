@@ -3,15 +3,15 @@
 # Compile script for QuicksilveR kernel
 # Copyright (C) 2020-2021 Adithya R.
 # (edits for CrystalCore kernel @dkpost3)
-
+     
 SECONDS=0 # builtin bash timer
-TC_DIR="$HOME/clang-r416183b1"
+TC_DIR="$HOME/clang/clang-r450784d"
 AK3_DIR="$HOME/AnyKernel3"
 DEFCONFIG="vendor/lahaina-qgki_defconfig vendor/xiaomi_QGKI.config vendor/lisa_QGKI.config"
-     
-ZIPNAME="CrystalCore-lisa-$(date '+%Y%m%d-%H%M').zip"
 
-git clone https://github.com/aseelps/prebuilts_clang_host_linux-x86_r416183b1.git $TC_DIR
+git clone https://gitlab.com/lynnnnzx/clang-r450784e.git $TC_DIR
+
+ZIPNAME="CrystalCore-lisa-$(date '+%Y%m%d-%H%M').zip"
 
 if test -z "$(git rev-parse --show-cdup 2>/dev/null)" &&
    head=$(git rev-parse --verify HEAD 2>/dev/null); then
@@ -58,7 +58,7 @@ if [ -f "$kernel" ] && [ -f "$dtb" ] && [ -f "$dtbo" ]; then
 	cp $kernel AnyKernel3
 	cp $dtb AnyKernel3/dtb
 	wget -P scripts/dtc/libfdt/ https://raw.githubusercontent.com/Anonym3310/mkdtimg/master/mkdtboimg.py
-	python2 scripts/dtc/libfdt/mkdtboimg.py create AnyKernel3/dtbo.img --page_size=4096 $dtbo
+	python3 scripts/dtc/libfdt/mkdtboimg.py create AnyKernel3/dtbo.img --page_size=4096 $dtbo
 	cp $(find out/modules/lib/modules/5.4* -name '*.ko') AnyKernel3/modules/vendor/lib/modules/
 	cp out/modules/lib/modules/5.4*/modules.{alias,dep,softdep} AnyKernel3/modules/vendor/lib/modules
 	cp out/modules/lib/modules/5.4*/modules.order AnyKernel3/modules/vendor/lib/modules/modules.load
@@ -77,4 +77,5 @@ else
 	exit 1
 fi
 
-rm -rf $TC_DIR scripts/dtc/libfdt/mkdtboimg.py
+rm -rf $TC_DIR
+rm -rf scripts/dtc/libfdt/mkdtboimg.py

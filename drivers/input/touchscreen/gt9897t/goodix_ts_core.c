@@ -1455,7 +1455,6 @@ static int goodix_ts_irq_setup(struct goodix_ts_core *core_data)
 
 	core_data->pm_qos_spi_req.type = PM_QOS_REQ_AFFINE_IRQ;
 	core_data->pm_qos_spi_req.irq = core_data->bus->irq;
-	irq_set_perf_affinity(core_data->pm_qos_spi_req.irq, IRQF_PERF_AFFINE);
 	pm_qos_add_request(&core_data->pm_qos_spi_req, PM_QOS_CPU_DMA_LATENCY,
 			PM_QOS_DEFAULT_VALUE);
 

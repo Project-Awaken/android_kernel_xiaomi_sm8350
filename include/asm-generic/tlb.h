@@ -205,14 +205,17 @@ extern void tlb_remove_table(struct mmu_gather *tlb, void *table);
 #define tlb_needs_table_invalidate() (true)
 #endif
 
+void tlb_remove_table_sync_one(void);
+
 #else
 
 #ifdef tlb_needs_table_invalidate
 #error tlb_needs_table_invalidate() requires MMU_GATHER_RCU_TABLE_FREE
 #endif
 
-#endif /* CONFIG_MMU_GATHER_RCU_TABLE_FREE */
+static inline void tlb_remove_table_sync_one(void) { }
 
+#endif /* CONFIG_MMU_GATHER_RCU_TABLE_FREE */
 
 #ifndef CONFIG_MMU_GATHER_NO_GATHER
 /*

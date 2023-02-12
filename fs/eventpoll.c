@@ -1930,8 +1930,8 @@ fetch_events:
 		write_unlock_irq(&ep->lock);
 
 		if (!eavail && !res)
-			timed_out = !schedule_hrtimeout_range(to, slack,
-							      HRTIMER_MODE_ABS);
+			timed_out = !freezable_schedule_hrtimeout_range(to, slack,
+									HRTIMER_MODE_ABS);
 
 		/*
 		 * We were woken up, thus go and try to harvest some events.
